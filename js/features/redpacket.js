@@ -519,6 +519,8 @@
     async function evaluatePartnerTrigger() {
         if (!_loaded) await _load();
         if (_isGatedByOtherModes()) return null; // 陪伴模式/观影模式期间不判定
+        // 相遇日期以用户修改后的为准：这份覆盖数据原本只在打开情侣空间时才加载，没打开过就会退回首条消息的日期
+        try { if (typeof window._annLoadMeetOverride === 'function') await window._annLoadMeetOverride(); } catch (e) {}
         _rpEnsureSchedulerShape();
         var today = _rpTodayStr();
 
@@ -839,8 +841,9 @@
         _save();
 
         if (typeof addMessage === 'function') {
+            const _rpMsgId = Date.now() + Math.random();
             addMessage({
-                id: Date.now() + Math.random(),
+                id: _rpMsgId,
                 sender: settings.partnerName || '对方',
                 text: '',
                 timestamp: new Date(),
@@ -853,7 +856,10 @@
                 note: null
             });
             if (typeof playSound === 'function') playSound('message');
-            if (typeof window._sendPartnerNotification === 'function') {
+            // 后台弹系统通知；在应用内弹窗/情侣空间里弹横条，点一下跳到这个红包
+            if (typeof window._notifyPartnerEvent === 'function') {
+                window._notifyPartnerEvent('给你发了一个红包', _rpMsgId);
+            } else if (typeof window._sendPartnerNotification === 'function') {
                 window._sendPartnerNotification(settings.partnerName || '对方', '给你发了一个红包');
             }
         }
